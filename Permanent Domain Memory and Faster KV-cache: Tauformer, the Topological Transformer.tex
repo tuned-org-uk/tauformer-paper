@@ -19,6 +19,7 @@
 % Code listings
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{graphicx}
 % Configure Rust syntax highlighting
 \lstdefinelanguage{Rust}{
 	keywords={fn, let, mut, if, else, for, while, loop, match, enum, struct, impl, trait, pub, use, mod, crate, self, super, const, static, unsafe, extern, true, false, Some, None, Ok, Err, Vec, Box, Option, Result},
@@ -279,18 +280,74 @@
 	
 	These are initial results running a limited benchmark on a local laptop but still promising and worth replicating at larger scale. The base assumption is confirmed that tauGPT is slightly faster than nanoGPT in a "no cache" mode and this is a good baseline to work on, in particular for the training phase of a large model. NanoGPT's "kv-cache" mode is dominated by extremely optimised GEMM and fused softmax kernels, while tauGPT's "kv-cache" likely pays additional lambda-computation overhead and less-optimized element-wise/broadcast kernels. There is a lot of room for optimisations in particular if we consider, as mentioned above, that the Graph Laplacian is computed to be a sparse matrix; so optimising the code for a sparse representation turns the number of dimensions $D$ into $nnz$ or the number of non-zero elements in the matrix (or a projection of) with potentially outperforming the D-bound (or projected) softmax. 
 	
-	The potential gains of tauformer/tauGPT in this run are clear: tauGPT in "no cache" mode is slightly faster than nanoGPT "no cache" (median tokens/sec 3.921 vs 3.610, and median p50 token latency ~257 ms vs ~279 ms), suggesting some benefit even when recomputing attention each step. More importantly for deployment, tauGPT’s "kv-cache" mode retains the "flat-latency" behaviour while operating with a different scoring kernel (lambda-distance rather than dot-product), indicating that the method can be implemented without introducing an obvious per-token latency blow-up over the tested decode length.
+	Here some data and diagrams from the tests results. All this data was collected running tests on CPU hardware because the objective of this concept architecture's test results are preliminary and to be taken as a reference and a baseline, to demonstrate that TauGPT/Tauformer can work as any other Transformer but with delivering of domain-specific (topological) metadata directly in the attention mechanism without inner-product.  
 	
-	Larger improvements are tested in larger windows generation tests (256, 512, 1024 token). The driving hypothesis is that when caching becomes too expensive memory-wise (like for very long windows with high-dimensional embeddings), tauGPT can provide a better solution both in terms of contextual accuracy and performance. Current research is exploring at the order of magnitude of 10000 dimensions with values for new token generation (compute logits → pick next token → append cycle) of 1024.
+	The full normalised token-latency results confirms that tauGPT is consistently faster per-token in "kv-cache" mode (a proxy for inference decoding), and consistently slower per-token in "no cache" (training/uncached proxy), with the gap widening in tauGPT's favour as generation length grows in "kv-cache". In the case of "no cache", the difference between the two get smaller as the lengths grow so there is room to make the hypothesis that at some threshold where context window and embeddings lengths are long enough tauGPT will be at least as fast as nanoGPT. This would confirm that Tauformer could be viable for training on multimodal data where multiple modalities are concatenated in the same embedding space. The assumption that gains are provided as the context window and the length of the embeddings grows is supported by ~0.5M decoded-token rows across 36 runs and 7 variants of tests with different lengths.
 	
+	\subsection{What was analysed}
 	
-	\section{Conclusion}
+	After filtering to generated tokens only ($0 \leq$ \texttt{token\_index} $\le$ \texttt{gen\_tokens}), the dataset contains 497,664 decoded-token latency rows spanning both engines ("nano", "tau"), both modes (\texttt{kv\_cache}, \texttt{no\_cache}), and \texttt{gen\_tokens} $\in {128, 256, 512, 1024}$.  Per-token comparisons were computed by matching "nano" and "tau" tokens on (\texttt{variant}, \texttt{prompt\_id}, \texttt{mode}, \texttt{gen\_tokens}, \texttt{token\_index)} and then taking the ratio \texttt{nano\_token\_ms} $/$ \texttt{tau\_token\_ms} ("speedup nano-over-tau").
 	
-	Here some basic data analysis of the results.
+	\subsection{Inference proxy (kv\_cache) results}
+	
+	On a matched per-token basis, nano/tau speedup medians (p50) increase with \texttt{gen\_tokens}: 1.09× (128), 1.12× (256), 1.17× (512), and 1.22× (1024), meaning tau's per-token latency advantage strengthens as sequences get longer. Tail behaviour also improves in tau's favour as sequences grow: the p95 of nano/tau per-token speedup rises from 1.35× (128) to 1.52× (1024), suggesting tau reduces worse-case token stalls relative to nano at longer generations in \texttt{kv\_cache} mode.  Looking specifically at the last 25\% of tokens (75–100\% bins), the median-latency ratio nano/tau reaches ~1.33× at \texttt{gen\_tokens=1024}, indicating the end of long generations is where tau helps most under \texttt{kv\_cache}.
+	
+	\subsection{Training/uncached proxy (no\_cache) results}
+	
+	For \texttt{no\_cache}, matched per-token speedups are $\le1$ across all lengths (tau slower): median nano/tau speedup is 0.75× (128), 0.75× (256), 0.76× (512), and 0.80× (1024).  The late-token-bin summary also stays $\le1$ for \texttt{no\_cache} (e.g., last-25\% median ratio is $\sim0.86×$ at 1024), but the ratio moves upward with length, which suggests tauGPT's relative penalty shrinks at longer sequences even without caching.  In the \texttt{no\_cache} distribution, even the p99 nano/tau speedup stays below 1 ($\simeq0.95–0.97$), meaning tauGPT is slower almost everywhere token-by-token in this mode rather than losing only in a small tail, the situation improves when the window and embeddings lengths grow.
+	
+	\subsection{Matched per-token speedup distribution (nano/tau)}
+	
+	This is the test matrix and the relative results:
+	
+	\begin{table}[H] % [H] forces the table to stay exactly here
+		\centering
+		\begin{tabular}{l r r r r r}
+			\hline
+			\textbf{mode} & \textbf{gen\_tokens} & \textbf{matched token pairs} & \textbf{speedup p50} & \textbf{speedup p95} & \textbf{speedup p99} \\
+			\hline
+			kv\_cache & 128  & 96{,}768  & 1.093 & 1.346 & 1.437 \\
+			kv\_cache & 256  & 165{,}888 & 1.124 & 1.395 & 1.494 \\
+			kv\_cache & 512  & 62{,}208  & 1.166 & 1.443 & 1.557 \\
+			kv\_cache & 1024 & 359{,}424 & 1.223 & 1.523 & 1.658 \\
+			no\_cache & 128  & 96{,}768  & 0.747 & 0.889 & 0.965 \\
+			no\_cache & 256  & 165{,}888 & 0.749 & 0.898 & 0.968 \\
+			no\_cache & 512  & 62{,}208  & 0.762 & 0.901 & 0.954 \\
+			no\_cache & 1024 & 359{,}424 & 0.805 & 0.924 & 0.965 \\
+			\hline
+		\end{tabular}
+		\caption{Matched per-token speedup distribution (nano/tau) across cache modes and sequence lengths.}
+		\label{tab:token-speedup-distribution}
+	\end{table}
+	
+	This is a diagram that compares the gains as the context windows grow up to $10^9$, this is only indicative as for nanoGPT is running on CPU and tauGPT is unoptimised and a concept model but I think it can provides hints to frame the orders of magnitude at which Tauformer can become performant also in \texttt{no\_cache} mode:
+	
+	\begin{figure}[H]              % [H] forces it to stay exactly here (requires \usepackage{float})
+		\centering                 % Centers the image horizontally
+		\includegraphics[width=0.8\textwidth]{nano_tau_grow_window.png} % Adjust width as needed
+		\caption{Regressions run on .}
+		\label{fig:my_image_label}
+	\end{figure}
+	
+	At current time I am running the same kind of tests but with the embeddings dimensions (\texttt{prompt\_len}) growing to the same order of magnitude to simulate concatenated multimodal embeddings. The hypothesis is that similar advantages as above could be demonstrated. 
+
+	\section{Conclusion: A Beginning}
+	
+	Potential for larger improvements are tested in larger windows generation tests (256, 512, 1024, ..., $10^6$ tokens). The driving hypothesis is that when caching becomes too expensive memory-wise (like for very long windows with high-dimensional embeddings), tauGPT can provide a better solution both in terms of contextual accuracy and performance. Current research is exploring at the order of magnitude of $10^4$ window length (average for LLMs is 6000 to 14000) with values for embeddings dimensions in the same order of magnitude. The idea is to make it possible to have a prompt length (embeddings length) that is of the same order of magnitude of number of non-zero values of the sparse representation in the pre-trained manifold, so that the model can adapt to the number of dimensions of the manifold processing an element in a single query ($Q$).
+	
+	The normalised token latencies indicate tau's current value proposition is "decode-heavy inference on long windows and high dimensions", with KV-cache enabled, because both median and tail per-token improvements increase with \texttt{gen\_tokens}.  By contrast, if training work is well proxied by \texttt{no\_cache}, tauGPT currently underperforms across essentially the entire per-token distribution; so demonstrating training wins require architectural/implementation changes (or a true forward-backward benchmark rather than \texttt{no\_cache}), or for the model to be tested on very long context windows and very high embeddings dimensions.  The next experiments that would most strengthen Tauformer position are \textit{(i)} sweeping \texttt{prompt\_len} (prefill/context length) separately from \texttt{gen\_tokens} up to lengths of 4000-10000 and \textit{(ii)} pushing \texttt{prompt\_len} in the same order of magnitude for longer windows. This is suggested by the per-token advantage trend in \texttt{kv\_cache} that is still climbing at 1024 and the \texttt{no\_cache} mode improving as \texttt{gen\_tokens} grows.
+	
+	These results demonstrate the promising characteristics of a Topological Transformer architecture, Tauformer; designed to deliver
+	\begin{quote}
+	\textit{(i)} domain-specific metadata and
+	
+	\textit{(ii)} provide topological search (using \texttt{arrowspace}'s \texttt{taumode})
+	\end{quote}
+	at the level of the attention mechanism. To synthesise in few words, Tauformer leverages \texttt{taumode} as attention score, allowing for a limited need of inner-products in the attention computation, potentially making possible very large context windows and to run attention on higher dimensional (multimodal) embeddings.  
 	
 	
 	\section{Acknowledgments}
-	The author is an independent researcher who self-funded this work. All works available at \href{https://www.tuned.org.uk}{his research page}. Thanks to all the backers and my supporting network of peers.
+	The author is an independent researcher who self-funded this work. All works available at \href{https://www.tuned.org.uk}{his research page}. Thanks to my supporting network of peers and to all the backers and sponsors to my research effort.
 	
 	\newpage
 	
