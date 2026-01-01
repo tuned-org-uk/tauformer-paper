@@ -273,11 +273,64 @@
 		logits
 	}
     \end{lstlisting}
+    
+    \subsection{Summary of similarities and differences}
+    
+    Both \texttt{nanoGPT} (\texttt{CausalSelfAttention}) and \texttt{tauGPT} (\texttt{TauModeAttention}) use identical V projection and fetching logic, confirmed by code review and tests.
+    
+    \paragraph{V projection equivalence}
+    
+    \textbf{Construction} - both create the same \texttt{c\_v} linear layer with identical initialization:
+    
+    \begin{lstlisting}[language=Rust]
+    cv: LinearConfig::new(n_embd, n_kv_head * head_dim)
+    .with_bias(false)
+    .with_initializer(KaimingUniform { gain: 0.5, fan_out_only: false })
+    \end{lstlisting}
+
+    \textbf{Forward path (prefill)} - both follow the exact same pipeline for V:
+    
+    \begin{enumerate}
+    \item Project: \texttt{self.cv.forward(x).clamp(-5.0, 5.0)}
+    \item Reshape: \texttt{.reshape([b, t, self.nkvhead, self.headdim])}
+    \item Transpose: \texttt{v.swap\_dims(1, 2)} → \texttt{[B, H\_kv, T, D]}
+    \item MQA expand \texttt{(if n\_head != n\_kv\_head)}: both use \texttt{unsqueeze(dim=2).expand(...).reshape(...)} to replicate KV heads
+    \item Weighted sum: \texttt{att.matmul(v)} after softmax
+    \end{enumerate}
+    
+    \textbf{Decode path (single-step)} - identical logic for computing new V and caching:
+    
+    \begin{itemize}
+    \item Project step: \texttt{self.cv.forward(x\_step).clamp(-5.0, 5.0).reshape([b, 1, n\_kv\_head, head\_dim]).swap\_dims(1, 2)}
+    \item Append to cache: \texttt{Tensor::cat(vec![v\_all, v\_new.clone()], 2)} (time dimension)
+    \item MQA expansion and weighted sum identical to forward
+    \end{itemize}
+    
+    \paragraph{What differs}
+    The only difference is attention scoring:
+    \begin{itemize}
+    \item \texttt{nanoGPT}: $Q K^T / \sqrt{d}$ then softmax
+    \item \texttt{tauGPT}: lambda-distance logits \texttt{tau\_distance\_logits(lambda\_q, lambda\_k)} then softmax
+    \end{itemize}
+    
+    After that, both apply the same softmax and the same \texttt{att.matmul(v)} to produce output.
+    
+    \paragraph{Test coverage confirms equivalence}
+    Tests verify V is handled identically:
+    
+    \begin{itemize}
+    \item \texttt{test\_forward\_shape\_consistency}: both produce \texttt{[B,T,C]} outputs (V contributes correctly)
+    \item \texttt{test\_decode\_single\_step}: both cache V with shape \texttt{[B, H\_kv, T, D]}
+    \item \texttt{test\_cache\_accumulation}: V cache grows identically (time dimension increments)
+    \item \texttt{test\_mqa\_expansion}: both correctly expand V when \texttt{n\_head != n\_kv\_head}
+    \end{itemize}
+    
+    The difference in final outputs (\texttt{test\_tau\_vs\_causal\_outputs\_differ\_expected}) is purely due to scoring
 
 	\section{Results}
 	\label{sec:results}
 	
-	Multiple tests have been run and results have been collected using \cite{taugpt_kvcache:2025}.
+	Multiple tests on both attention mechanisms have been run and results have been collected using \cite{taugpt_kvcache:2025}.
 	
 	Here some data and diagrams from the tests results. All this data was collected running tests on CPU hardware because the objective of this concept architecture's test results are preliminary and to be taken as a reference and a baseline, to demonstrate that Tauformer/tauGPT can work as any other Transformer but with delivering of domain-specific (topological) metadata directly in the attention mechanism and with some performance gains for larger windows and higher dimensional embeddings.  
 	
