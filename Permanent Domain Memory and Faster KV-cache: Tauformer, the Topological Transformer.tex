@@ -22,6 +22,11 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{draftwatermark}
+\SetWatermarkText{DRAFT\protect\\CONFIDENTIAL\protect\\UNTIL\protect\\PUBLISHING}
+\SetWatermarkScale{1.5}
+\SetWatermarkColor[gray]{0.7}
+\SetWatermarkAngle{36}
 % Configure Rust syntax highlighting
 \lstdefinelanguage{Rust}{
 	keywords={fn, let, mut, if, else, for, while, loop, match, enum, struct, impl, trait, pub, use, mod, crate, self, super, const, static, unsafe, extern, true, false, Some, None, Ok, Err, Vec, Box, Option, Result},
@@ -142,7 +147,7 @@
 	Beside the additional potential computing advantages that are analysed below, the Tauformer and relative \texttt{tauGPT} concept allow the kind of persistent memory described in \ref{sec:generics};  \textbf{delivering a persistent (long-term, unchanging in this initial design) memory within the attention mechanism}. This follows current research for supplementing LLMs' memory with memory sub-systems: for example as seen in \cite{titans:2025} where a neural long-term memory module for 2M+ token contexts works in parallel and provides prefix sub-vectors to the context window; or in \cite{cognitivemem:2025} that categorises memory into sensory, short-term and long-term within agentic workflows; or in \cite{longmem:2024} that uses a "Memory Bank" to store and retrieve long-form text for in-context learning. In addition, the papers that try to supplement LLMs with agentic workflows: for example \cite{amem:2025} that evaluates "Agentic Memory" across multi-hop and temporal reasoning tasks.
 	For the purpose of this paper I call the running attention mechanism the "momentary memory" and the Graph Laplacian against which the distance scores are computed "persistent memory". This aligns with the scope of my current research for building an "AI Memory Layer" based on topological vector search or, more briefly, "Memory Models" (MM) \cite{tuned_blog:2025}.
 	
-	Tauformer/tauGPT is the only, at my current knowledge, Transformer architecture that delivers domain knowledge directly in the attention mechanism; leveraging the compression made possible by the \textit{arrowspace} library and the \textit{taumode} synthetic index. While technical and conceptual advantages are brought forward by this paper, further research is necessary to ascertain the improved accuracy in the training and token generation on very large context windows and the improved capability in avoiding deadlocks sooner than at reasoning time. As a follow-up version of this architecture, it is also possible to imagine defining an updating mechanism for the permanent memory that would make it into a long- or medium-term memory that can be adapted to the newly generated tokens.
+	Tauformer/tauGPT is the only, at my current knowledge, Transformer architecture that delivers domain knowledge directly in the attention mechanism; leveraging the compression made possible by the \textit{arrowspace} library and the \textit{taumode} synthetic index. While technical and conceptual advantages are brought forward by this paper, further research is necessary to ascertain the improved accuracy in the training and token generation on very large context windows and the improved capability in avoiding generation problems sooner than at reasoning time. As a follow-up version of this architecture, it is also possible to imagine defining an updating mechanism for the permanent memory that would make it into a long- or medium-term memory that can be adapted to the newly generated tokens.
 	
 	\subsection{Code}
 	
@@ -282,6 +287,12 @@
 	
 	\colorbox{yellow!30}{See table \ref{tab:benchmark-summary} for summary statistics} (repository \cite{taugpt_kvcache:2025} may contain more up-to-date data in the \texttt{report/} directory).
 	
+	TTFT (Time To First Token) is measured differently depending on the caching mode:
+	\begin{itemize}
+	\item "no\_cache" mode: TTFT includes the full forward pass through the entire prompt context, since there's no cached state. The timer starts when processing begins and stops when the first token is generated; \texttt{end\_to\_end\_ms = ttft\_ms + decode\_total\_ms}.
+	\item "kv\_cache" mode: TTFT measures only the decode step for producing the first new token, after the cache has already been built from the prompt. The prefill/priming time is tracked separately in the \texttt{prefill\_ms} and \texttt{prime\_ms columns}; \texttt{end\_to\_end\_ms = prefill\_ms + ttft\_ms + decode\_total\_ms}.
+	\end{itemize}
+	
 	\begin{table*}[htbp]
 		\centering
 		\caption{Benchmark Summary Statistics}
@@ -371,7 +382,7 @@
 		\label{tab:token-speedup-distribution}
 	\end{table}
 	
-	This is a diagram that compares the gains as the context windows grow up to $10^9$, this is only indicative as for nanoGPT is running on CPU and tauGPT is unoptimised and a concept model but I think it can provides hints to frame the orders of magnitude at which Tauformer can become performant also in \texttt{no\_cache} mode:
+	These diagrams compare the gains as the context window and the prompt length grow up to $10^9$, this is only indicative as for \texttt{nanoGPT} is running on CPU and \texttt{tauGPT} is unoptimised and a concept model but I think it can provides hints to frame the orders of magnitude at which Tauformer can become performant also in \texttt{no\_cache} mode or in other scenarios:
 	
 	\begin{figure}[H]
 		\centering
