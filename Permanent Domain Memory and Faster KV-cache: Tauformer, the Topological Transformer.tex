@@ -74,13 +74,13 @@
 
 \begin{document}
 	
-	\title{Permanent Domain Memory and Faster Inference:\protect\\ Tauformer, the Topological Transformer}
+	\title{Topological Transformer: A redesign for\protect\\Permanent Domain-Memory\protect\\and Faster Inference}
 	
 	\author{Lorenzo Moriondo\\
 		\small Independent Researcher - tuned.org.uk\\
 		\small ORCID: 0000-0002-8804-2963}
 	
-	\date{1 January 2026}
+	\date{8 January 2026}
 	
 	\maketitle
 	
@@ -135,7 +135,7 @@
 	 $$a_{ij}=-|\lambda_{q,i}-\lambda_{k,j}|/\mathrm{temp}$$
 	after which the causal mask and $V$-weighted sum are reused unchanged. This changes what must be cached: tauformer stores $V$ and the \textbf{scalar} $\lambda_k$ history rather than full $K$, reducing cache size
 	\colorbox{yellow!30}{from $2B\,H_{kv}\,T\,D$ floats to $B\,H_{kv}\,T\,D + B\,H_{kv}\,T$ floats}
-	(about ~50\% savings for typical $D$).
+	(about $\sim50\%$ savings for typical $D$).
 	Computing shifts accordingly, instead of spending $O(B\,H\,T\,D)$ on dot-products at each decode step, tauformer pays $O(B\,H\,\mathrm{nnz}(L))$ to compute the query’s Rayleigh term  with a sparse Laplacian and only $O(B\,H\,T)$ to compare scalars against cached $\lambda_k$, making the scoring step dimension-light while keeping value aggregation $O(B\,H\,T\,D)$ the same (equivalence of results compared to \texttt{nanoGPT} are available in the implementation's unit tests).
 	
 	The key improvement is that the Graph Laplacian is designed to be a sparse matrix, so optimising the code for a sparse representation the $O(D²)$ terms become $O(nnz)$ with $nnz$ being the number of non-zero elements in the matrix. 

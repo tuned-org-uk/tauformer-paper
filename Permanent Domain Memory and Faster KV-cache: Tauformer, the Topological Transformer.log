@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.8.25)  1 JAN 2026 14:29
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.8.25)  4 JAN 2026 03:28
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -713,9 +713,9 @@ nts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm
 /cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/m
 sbm10.pfb>
 Output written on "Permanent Domain Memory and Faster KV-cache: Tauformer, the 
-Topological Transformer.pdf" (13 pages, 1795387 bytes).
+Topological Transformer.pdf" (13 pages, 1795684 bytes).
 PDF statistics:
- 1083 PDF objects out of 1200 (max. 8388607)
+ 1082 PDF objects out of 1200 (max. 8388607)
  409 compressed objects within 5 object streams
  162 named destinations out of 1000 (max. 500000)
  128 words of extra memory for PDF output out of 10000 (max. 10000000)
