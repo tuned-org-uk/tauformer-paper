@@ -70,7 +70,7 @@
 
 \begin{document}
 	
-	\title{Topological Transformer: A Redesign\protect\\for Permanent Domain-Memory\protect\\and cheaper kernel operations}
+	\title{Topological Transformer: A Redesign\protect\\for Domain-Memory\protect\\and cheaper kernel operations}
 	
 	\author{Lorenzo Moriondo\\
 		\small Independent Researcher - tuned.org.uk\\
@@ -142,7 +142,7 @@
 	\subsection{Built-in Memory}
 	
 	Beside the additional potential computing advantages that are analysed below, the Tauformer and relative \texttt{tauGPT} concept allow the kind of persistent memory described in \ref{sec:generics};  \textbf{delivering a persistent (long-term, unchanging in this initial design) memory within the attention mechanism}. This follows current research for supplementing LLMs with memory sub-systems: for example as seen in \cite{titans:2025} where a neural long-term memory module for 2M+ token contexts works in parallel and provides prefix sub-vectors to the context window; or in \cite{cognitivemem:2025} that categorises memory into sensory, short-term and long-term within agentic workflows; or in \cite{longmem:2024} that uses a "Memory Bank" to store and retrieve long-form text for in-context learning. In addition, the papers that try to supplement LLMs with agentic workflows: for example \cite{amem:2025} that evaluates "Agentic Memory" across multi-hop and temporal reasoning tasks.
-	For the purpose of this paper I call the running attention mechanism the "momentary memory" and the Graph Laplacian against which the distance scores are computed "persistent memory". This aligns with the scope of my current research for building an "AI Memory Layer" based on topological vector search or, more briefly, "Memory Models" (MM) \cite{tuned_blog:2025}.
+	Some of these capabilities can be delivered at a lower-level in the LLM stack. For the purpose of this paper I consider the running attention mechanism the "momentary memory" and the Graph Laplacian against which the distance scores are computed "persistent memory" or Domain-Memory, e.g. a kind of information that is constant to the context as it incorporates some invariants of the frame of reference that is the context in which the generative model generates tokens. This aligns with the scope of my current research for building an "AI Memory Layer" based on topological vector search \cite{tuned_blog:2025}. Tauformer is the first Transformer to natively incorporate some kind of memory capabilities for graph-based data via self-attention. Previous research deals with memory of previous states of the momentary memory like \cite{sukhbaatar:2019} and \cite{bulatov:2022} but not with providing meaningful contextual memory in self-attention. 
 	
 	Tauformer/tauGPT is the only, at my current knowledge, Transformer architecture that delivers domain knowledge directly in the attention mechanism providing the self-attention itself with some kind of starting context via the knowledge base metadata compressed in \textit{gl}; leveraging the compression made possible by the \textit{arrowspace} library and the \textit{taumode} synthetic index. While technical and conceptual advantages are brought forward by this paper, further research is necessary to ascertain the improved accuracy in the training and token generation on very large context windows and the improved capability in avoiding generation problems sooner than at reasoning time.
 	
@@ -519,6 +519,18 @@
 		\newblock Tuned Blog.
 		\newblock \url{www.tuned.org.uk/blog}, 2025.
 		\newblock Accessed: December 29, 2025.
+	
+		\bibitem{sukhbaatar:2019}
+		S.~Sukhbaatar, E.~Grave, G.~Lample, H.~Jegou, and A.~Joulin,
+		\newblock Augmenting Self-attention with Persistent Memory
+		\newblock \emph{arXiv preprint arXiv:1907.01470}, 2019.
+		doi:10.48550/arXiv.1907.01470.
+		
+		\bibitem{bulatov:2022}
+		A.~Bulatov, Y.~Kuratov, and M.~S.~Burtsev,
+		\newblock Recurrent Memory Transformer
+		\newblock \emph{arXiv preprint arXiv:2207.06881}, 2022.
+		doi:10.48550/arXiv.2207.06881.
 		
 		\bibitem{RustLang:2024}
 		The Rust Project Developers, \textit{The Rust Programming Language}, 2024. [Online]. Available: \url{www.rust-lang.org}
