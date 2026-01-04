@@ -70,19 +70,19 @@
 
 \begin{document}
 	
-	\title{Topological Transformer: A redesign\protect\\for Permanent Domain-Memory\protect\\and Faster Inference in LLMs}
+	\title{Topological Transformer: A redesign\protect\\for Permanent Domain-Memory\protect\\and faster inference in LLMs}
 	
 	\author{Lorenzo Moriondo\\
 		\small Independent Researcher - tuned.org.uk\\
 		\small ORCID: 0000-0002-8804-2963}
 	
-	\date{8 January 2026}
+	\date{5 January 2026}
 	
 	\maketitle
 	
 	\begin{abstract}
 		Starting from previous research on vector search for topological spaces (spectral search with \textit{taumode}), I introduce in this paper the definition, concept implementation and testing of a new class of Transformer architecture focused on improving the attention mechanism.
-		The Topological Transformer, or \textit{Tauformer} applies all the features from current attention-based transformers (taking as baseline \textit{nanoGPT}) and redesigns the attention mechanism at its core to: \textit{(i)} allow delivering domain-specific context at the level of the attention mechanism for more domain-relevant token generation, \textit{(ii)} improve time per token by $\sim20\%$ and provide savings in KV-cache memory size by $\sim50\%$ and \textit{(iii)} draw a path to improve the Transformer performance on larger context windows with longer prompt lengths and high-dimensional embeddings; this made possible by substituting inner-product with \textit{taumode}'s synthetic index-based distance, aiming to provide relevant linear gains in training and generation compared to current GPTs. 
+		The Topological Transformer, or \textit{Tauformer} applies all the features from current attention-based transformers (taking as baseline \textit{nanoGPT}) and redesigns the attention mechanism at its core to: \textit{(i)} allow delivering domain-specific context at the level of the attention mechanism for more domain-relevant token generation, \textit{(ii)} improve time per token by $\sim20\%$ and provide savings in KV-cache memory size by $\sim50\%$ and \textit{(iii)} draw a path to improve the Transformer performance on larger context windows with longer prompt lengths and high-dimensional embeddings; this is made possible by substituting inner-product with \textit{taumode}'s synthetic index-based distance, aiming to provide relevant linear gains in training and generation compared to current GPTs. 
 	\end{abstract}
 	
 	\section{Introduction}
@@ -420,7 +420,7 @@
 		\label{tab:token-speedup-distribution}
 	\end{table}
 	
-	These diagrams compare the gains as the context window, embeddings dimensions and the prompt length grow up beyond $10^6$, this is only indicative as for \texttt{nanoGPT} is running on CPU and \texttt{tauGPT} is unoptimised and a concept model but I think it can provides hints to frame the orders of magnitude at which Tauformer can become performant also in \texttt{no\_cache} mode or in other scenarios:
+	These diagrams compare the gains as the context window, the prompt length and embeddings dimensions grow up beyond $\sim10^7$, this is only indicative as for \texttt{nanoGPT} is running on CPU and \texttt{tauGPT} is unoptimised and a concept model but I think it can provides hints to frame the orders of magnitude at which Tauformer can become performant also in \texttt{no\_cache} mode or in other scenarios:
 	
 	\begin{figure}[H]
 		\centering
@@ -447,7 +447,7 @@
 	
 	Potential for larger improvements are tested in larger windows generation tests (256, 512, 1024, ..., $10^6$ tokens) and larger embeddings dimensions. The driving hypothesis is that when caching becomes too expensive memory-wise (like for very long windows with high-dimensional embeddings), \texttt{tauGPT} can provide a better solution both in terms of contextual accuracy and performance. Current research is exploring at the order of magnitude of $10^4$ window length (average for LLMs is 6000 to 14000) with values for embeddings dimensions in the same order of magnitude. The idea is to test to have a prompt length and embeddings length that are of the same order of magnitude of number of non-zero values of the sparse representation in the pre-trained manifold, so that the model can adapt to the number of dimensions of the manifold processing an element in a single query ($Q$). The prompt length should be obviously modifiable at will.
 	
-	\textit{The normalised token latencies indicate tau's current value proposition is "decode-heavy inference on long windows and high dimensions"}, with KV-cache enabled, because both median and tail per-token improvements increase with \texttt{gen\_tokens}.  By contrast, if training work is well proxied by \texttt{no\_cache}, \texttt{tauGPT} currently underperforms across essentially the entire per-token distribution on lower scales; so demonstrating training wins require architectural/implementation optmizations, or for the model to be tested on very long context windows and very high embeddings dimensions (as showed in the regression diagrams). The next experiments that would most strengthen Tauformer position should aim to achieve the same results beyond lengths of $10^7$ for the $H$ $D$ and  $T$.
+	\textit{The normalised token latencies indicate tau's current value proposition is "decode-heavy inference on long windows and high dimensions" with promising performance gains both in a "no cache" and "kv-cache" mode for large scales}.  If training work is well proxied by \texttt{no\_cache}, \texttt{tauGPT} currently underperforms across essentially the entire per-token distribution on lower scales; so demonstrating training wins require architectural/implementation optimisations, or for the model to be tested on very long context windows and very high embeddings dimensions (as showed in the regression diagrams). The next experiments that would most strengthen Tauformer position should aim to achieve the same results beyond lengths of $10^7$ for the $H$ $D$ and  $T$.
 	
 	Current results demonstrate the promising characteristics of a Topological Transformer architecture, Tauformer; designed to deliver
 	\begin{itemize}
