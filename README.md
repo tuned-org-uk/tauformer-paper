@@ -9,3 +9,8 @@ The **Topological Transformer** (*Tauformer*) preserves the standard attention-b
 - Provide a pathway to better performance on larger context windows (longer prompts) and high-dimensional embeddings.
 
 These gains are enabled by substituting the standard inner-product attention kernel with *taumode*’s synthetic index–based distance, aiming for meaningful linear improvements in training and generation compared to current GPT-style models.
+
+Code: https://github.com/tuned-org-uk/tauformer
+Bench: https://github.com/tuned-org-uk/taugpt-kvcache-bench
+
+Copyright 2025-2026 Lorenzo Moriondo
