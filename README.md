@@ -14,6 +14,8 @@ These gains are enabled by substituting the standard inner-product attention ker
 
 Paper: https://github.com/tuned-org-uk/tauformer-paper/blob/main/Topological%20Transformer-uploaded%20version.pdf
 
+Pre-print: https://www.techrxiv.org/users/685780/articles/1375955-topological-transformer-a-redesign-for-domain-memory-and-cheaper-kernel-operations
+
 Code: https://github.com/tuned-org-uk/tauformer
 
 Bench: https://github.com/tuned-org-uk/taugpt-kvcache-bench
